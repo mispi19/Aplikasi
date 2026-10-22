@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Angkat Nilai Siswa</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <header class="bg-indigo-700 text-white shadow-lg sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-indigo-600 rounded-lg shadow-inner">
+                    <i class="fa-solid fa-chart-line text-2xl text-yellow-300"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">Aplikasi Angkat Nilai</h1>
+                    <p class="text-xs text-indigo-200">Konversi & Scaling Nilai Siswa Otomatis</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="btnReload" onclick="loadSpreadsheetData()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-medium transition flex items-center gap-2 border border-indigo-400/30">
+                    <i class="fa-solid fa-rotate text-xs"></i> Fresh Data
+                </button>
+                <a href="https://legendlv001.github.io/RekapNilaiSdn1Prg/" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-graduation-cap text-xs"></i> Nilai
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Sidebar / Configuration Controls -->
+        <aside class="lg:col-span-4 space-y-5">
+            <!-- Formula Config Card -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                <h2 class="text-base font-bold text-slate-800 border-b pb-3 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-indigo-600"></i> Parameter Angkat Nilai
+                </h2>
+                
+                <div class="space-y-4">
+                    <!-- Target Parameters -->
+                    <div class="bg-indigo-50/60 p-3.5 rounded-xl border border-indigo-100 space-y-3">
+                        <span class="text-xs font-bold text-indigo-800 uppercase tracking-wider block">Target Output</span>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Min Diinginkan</label>
+                                <input type="number" id="minTarget" value="75" step="any" oninput="calculateAll()" class="w-full px-3 py-1.5 text-sm font-semibold rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Max Diinginkan</label>
+                                <input type="number" id="maxTarget" value="95" step="any" oninput="calculateAll()" class="w-full px-3 py-1.5 text-sm font-semibold rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Source Parameters -->
+                    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Batas Nilai Murni (Otomatis)</span>
+                            <span class="text-[10px] bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded-full"><i class="fa-solid fa-lock text-[9px] mr-1"></i> Terkunci</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-1">Nilai Terkecil (Min)</label>
+                                <input type="number" id="minSource" value="0" readonly class="w-full px-3 py-1.5 text-sm font-semibold text-slate-600 rounded-lg border border-slate-200 bg-slate-100 cursor-not-allowed focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-1">Nilai Terbesar (Max)</label>
+                                <input type="number" id="maxSource" value="0" readonly class="w-full px-3 py-1.5 text-sm font-semibold text-slate-600 rounded-lg border border-slate-200 bg-slate-100 cursor-not-allowed focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rounding Option -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Pembulatan Desimal</label>
+                        <select id="decimalPlaces" onchange="calculateAll()" class="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                            <option value="0">Tanpa Desimal (Bulat)</option>
+                            <option value="1">1 Angka Desimal (mis. 82,5)</option>
+                            <option value="2" selected>2 Angka Desimal (mis. 82,54)</option>
+                            <option value="exact">Presisi Asli (Tanpa Pembulatan)</option>
+                        </select>
+                    </div>
+
+                    <!-- Excel Regional Format Option -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Pemisah Desimal (Sesuai Excel)</label>
+                        <select id="decimalSeparator" onchange="calculateAll()" class="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white font-medium">
+                            <option value="comma" selected>Koma ( , ) - Standar Excel Indonesia / Regional ID</option>
+                            <option value="dot">Titik ( . ) - Standar US / International</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Instructions Badge for Copy & Paste Buttons -->
+                <div class="mt-4 p-3 bg-slate-100 rounded-xl border border-slate-200 text-[11px] text-slate-700 space-y-1.5 shadow-inner">
+                    <p class="font-bold text-slate-800 border-b border-slate-200 pb-1 flex items-center gap-1.5">
+                        <i class="fa-solid fa-lightbulb text-amber-500 text-xs"></i> Petunjuk Tombol
+                    </p>
+                    <p class="leading-tight">
+                        <strong class="text-emerald-700"><i class="fa-regular fa-clipboard mr-0.5"></i> Tombol Paste:</strong> Untuk mengisi Nilai Murni otomatis dari hasil copy Anda <span class="text-slate-500 font-medium">(Saran: Nilainya harus berbaris ke bawah)</span>.
+                    </p>
+                    <p class="leading-tight">
+                        <strong class="text-indigo-700"><i class="fa-regular fa-copy mr-0.5"></i> Tombol Copy:</strong> Untuk mengambil Nilai Hasil dari angkat nilai <span class="text-slate-500 font-medium">(Untuk dipastekan di mana Anda inginkan)</span>.
+                    </p>
+                </div>
+
+                <!-- Formula Info Badge -->
+                <div class="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200/60 text-[11px] text-amber-800 leading-relaxed">
+                    <i class="fa-solid fa-circle-info text-amber-600 mr-1"></i>
+                    <strong>Rumus:</strong> <br>
+                    <code class="text-[10px] bg-amber-100 px-1 py-0.5 rounded">MinTarget + ((Nilai - MinAwal)/(MaxAwal - MinAwal) * (MaxTarget - MinTarget))</code>
+                </div>
+            </div>
+
+            <!-- Class Navigation List -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                <h2 class="text-base font-bold text-slate-800 border-b pb-3 mb-3 flex items-center justify-between">
+                    <span class="flex items-center gap-2"><i class="fa-solid fa-users-rectangle text-indigo-600"></i> Pilih Kelas</span>
+                    <span id="classCountBadge" class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold">0</span>
+                </h2>
+                <div id="classList" class="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+                    <!-- Class Buttons dynamic loading -->
+                    <div class="text-center py-6 text-slate-400 text-xs flex flex-col items-center gap-2">
+                        <i class="fa-solid fa-spinner fa-spin text-lg"></i>
+                        <span>Memuat daftar kelas...</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <section class="lg:col-span-8 flex flex-col space-y-4">
+            
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex-1 flex flex-col overflow-hidden">
+                
+                <!-- Table Header Toolbar -->
+                <div class="p-4 sm:p-5 border-b border-slate-200 bg-slate-50/50 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2 id="currentClassTitle" class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <span>Pilih Kelas di Samping</span>
+                        </h2>
+                        <p id="studentCountText" class="text-xs text-slate-500 mt-0.5">Total Siswa: 0</p>
+                    </div>
+
+                    <!-- Copy & Paste Action Buttons -->
+                    <div class="flex items-center gap-2">
+                        <button onclick="pasteValues()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl text-xs font-semibold transition flex items-center gap-2 shadow-sm">
+                            <i class="fa-regular fa-clipboard"></i>
+                            <span>Paste Nilai Murni</span>
+                        </button>
+                        <button onclick="copyResults()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-xl text-xs font-semibold transition flex items-center gap-2 shadow-sm">
+                            <i class="fa-regular fa-copy"></i>
+                            <span>Copy Hasil Konversi</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Notification Alert Banner -->
+                <div id="alertBanner" class="hidden px-4 py-3 text-xs font-medium flex items-center justify-between transition-all duration-300">
+                    <span id="alertMessage" class="flex items-center gap-2"></span>
+                    <button onclick="hideAlert()" class="text-current opacity-70 hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <!-- Table Content -->
+                <div class="overflow-x-auto flex-1">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100/80 text-slate-600 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
+                                <th class="py-3 px-4 w-12 text-center">No</th>
+                                <th class="py-3 px-4">Nama Siswa</th>
+                                <th class="py-3 px-4 w-36 text-center">Nilai Murni</th>
+                                <th class="py-3 px-4 w-36 text-center bg-indigo-50/50 text-indigo-900 border-l border-indigo-100">Hasil Konversi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentTableBody" class="divide-y divide-slate-100 text-sm">
+                            <tr>
+                                <td colspan="4" class="text-center py-12 text-slate-400">
+                                    <i class="fa-solid fa-hand-pointer text-3xl mb-2 text-slate-300 block"></i>
+                                    Silakan pilih kelas dari daftar di sebelah kiri.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Footer Summary inside Card -->
+                <div class="p-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center">
+                    <span id="quickStats">Rata-rata Hasil: -</span>
+                    <span class="text-[11px] text-slate-400">Gunakan tab / enter untuk berpindah input dengan cepat</span>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <script>
+        // Data Store
+        let rawSheetData = [];
+        let groupedData = {}; // { "Kelas 7A": [{no: 1, nama: "Budi", murni: null, hasil: null}], ... }
+        let currentSelectedClass = null;
+
+        // Spreadsheet TSV export endpoint URL
+        const SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1wVGqO2i8dNfC9-X0lIwBJ933MP4PRnzcTp2su2dqL5E/gviz/tq?tqx=out:csv&sheet=Siswa';
+
+        window.onload = function() {
+            loadSpreadsheetData();
+        };
+
+        // Fetch data from Spreadsheet
+        async function loadSpreadsheetData() {
+            showClassLoading();
+            try {
+                const response = await fetch(SPREADSHEET_URL);
+                if (!response.ok) throw new Error('Gagal mengakses spreadsheet');
+                const csvText = await response.text();
+                
+                parseSpreadsheetCSV(csvText);
+                showNotification('Data siswa berhasil dimuat!', 'success');
+            } catch (error) {
+                console.error(error);
+                showNotification('Gagal memuat data dari Spreadsheet. Pastikan akses Google Sheet terbuka untuk publik.', 'danger');
+                renderClassList();
+            }
+        }
+
+        // CSV Parser for Sheet data
+        function parseSpreadsheetCSV(csvText) {
+            const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            if (lines.length < 2) {
+                showNotification('Sheet kosong atau format tidak sesuai', 'danger');
+                return;
+            }
+
+            // Simple CSV parser handling quotes
+            const parseRow = (text) => {
+                let p = '', c = '', r = [];
+                let q = false;
+                for (let i = 0; i < text.length; i++) {
+                    c = text[i];
+                    if (c === '"') {
+                        if (q && text[i+1] === '"') { p += '"'; i++; }
+                        else { q = !q; }
+                    } else if (c === ',' && !q) {
+                        r.push(p.trim());
+                        p = '';
+                    } else {
+                        p += c;
+                    }
+                }
+                r.push(p.trim());
+                return r;
+            };
+
+            const headers = parseRow(lines[0]).map(h => h.replace(/^"|"$/g, '').toLowerCase());
+            
+            // Auto detect column indexes
+            let nameIdx = headers.findIndex(h => h.includes('nama'));
+            let classIdx = headers.findIndex(h => h.includes('kelas'));
+
+            if (nameIdx === -1) nameIdx = 1; // Fallback second column
+            if (classIdx === -1) classIdx = 2; // Fallback third column
+
+            groupedData = {};
+
+            for (let i = 1; i < lines.length; i++) {
+                const cols = parseRow(lines[i]).map(c => c.replace(/^"|"$/g, ''));
+                const nama = cols[nameIdx] || '';
+                const kelas = cols[classIdx] || 'Tanpa Kelas';
+
+                if (!nama) continue; // Skip empty rows
+
+                if (!groupedData[kelas]) {
+                    groupedData[kelas] = [];
+                }
+
+                groupedData[kelas].push({
+                    id: groupedData[kelas].length + 1,
+                    nama: nama,
+                    murni: '',
+                    hasil: null
+                });
+            }
+
+            renderClassList();
+
+            // Select first class by default if available
+            const classNames = Object.keys(groupedData);
+            if (classNames.length > 0) {
+                selectClass(classNames[0]);
+            }
+        }
+
+        function showClassLoading() {
+            document.getElementById('classList').innerHTML = `
+                <div class="text-center py-6 text-slate-400 text-xs flex flex-col items-center gap-2">
+                    <i class="fa-solid fa-circle-notch fa-spin text-indigo-600 text-xl"></i>
+                    <span>Mengambil data dari Google Sheet...</span>
+                </div>
+            `;
+        }
+
+        function renderClassList() {
+            const classListEl = document.getElementById('classList');
+            const classNames = Object.keys(groupedData);
+            
+            document.getElementById('classCountBadge').textContent = classNames.length;
+
+            if (classNames.length === 0) {
+                classListEl.innerHTML = `<p class="text-center py-4 text-xs text-slate-400">Tidak ada kelas ditemukan.</p>`;
+                return;
+            }
+
+            classListEl.innerHTML = classNames.map(cls => {
+                const isActive = cls === currentSelectedClass;
+                const count = groupedData[cls].length;
+                return `
+                    <button onclick="selectClass('${cls}')" 
+                        class="w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-semibold flex items-center justify-between transition ${
+                            isActive 
+                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' 
+                            : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80'
+                        }">
+                        <span class="truncate"><i class="fa-solid fa-graduation-cap mr-2 ${isActive ? 'text-indigo-200' : 'text-slate-400'}"></i>${cls}</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full ${isActive ? 'bg-indigo-500 text-white' : 'bg-slate-200 text-slate-600'}">${count} Siswa</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function selectClass(className) {
+            currentSelectedClass = className;
+            renderClassList();
+
+            document.getElementById('currentClassTitle').innerHTML = `<i class="fa-solid fa-users text-indigo-600"></i> ${className}`;
+            const students = groupedData[className] || [];
+            document.getElementById('studentCountText').textContent = `Total Siswa: ${students.length}`;
+
+            renderStudentTable();
+            calculateAll();
+        }
+
+        function renderStudentTable() {
+            const tbody = document.getElementById('studentTableBody');
+            if (!currentSelectedClass || !groupedData[currentSelectedClass]) return;
+
+            const students = groupedData[currentSelectedClass];
+
+            if (students.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-400">Tidak ada siswa di kelas ini.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = students.map((s, idx) => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="py-2.5 px-4 text-center font-medium text-slate-400 text-xs">${idx + 1}</td>
+                    <td class="py-2.5 px-4 font-medium text-slate-800">${escapeHtml(s.nama)}</td>
+                    <td class="py-2.5 px-4 text-center">
+                        <input type="number" step="any" value="${s.murni !== null && s.murni !== undefined ? s.murni : ''}"
+                            placeholder="0"
+                            oninput="updateStudentMurni(${idx}, this.value)"
+                            class="murni-input w-24 text-center px-2 py-1 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold text-slate-800 bg-white"
+                        />
+                    </td>
+                    <td class="py-2.5 px-4 text-center font-bold text-indigo-600 bg-indigo-50/30 border-l border-indigo-50/50" id="hasil-${idx}">
+                        ${s.hasil !== null && s.hasil !== undefined && !isNaN(s.hasil) ? s.hasil : '-'}
+                    </td>
+                </tr>
+            `).join('');
+
+            updateQuickStats();
+        }
+
+        function updateStudentMurni(index, val) {
+            if (!currentSelectedClass) return;
+            groupedData[currentSelectedClass][index].murni = val;
+            
+            // Auto update Min & Max from raw values dynamically
+            autoDetectMinMax();
+            calculateAll();
+            updateQuickStats();
+        }
+
+        function calculateRow(index) {
+            if (!currentSelectedClass) return;
+            const student = groupedData[currentSelectedClass][index];
+            const rawVal = student.murni;
+
+            const minTarget = parseFloat(document.getElementById('minTarget').value) || 0;
+            const maxTarget = parseFloat(document.getElementById('maxTarget').value) || 0;
+            const minSource = parseFloat(document.getElementById('minSource').value);
+            const maxSource = parseFloat(document.getElementById('maxSource').value);
+            const decimals = document.getElementById('decimalPlaces').value;
+            const separator = document.getElementById('decimalSeparator') ? document.getElementById('decimalSeparator').value : 'comma';
+
+            const cellHasil = document.getElementById(`hasil-${index}`);
+
+            if (rawVal === '' || rawVal === null || isNaN(parseFloat(rawVal))) {
+                student.hasil = null;
+                student.hasilFormatted = '-';
+                if (cellHasil) cellHasil.textContent = '-';
+                return;
+            }
+
+            const rawNum = parseFloat(rawVal);
+
+            let resultNum;
+            // Guard against division by zero (e.g. when maxSource equals minSource)
+            if (maxSource === minSource || isNaN(minSource) || isNaN(maxSource)) {
+                resultNum = minTarget;
+            } else {
+                // RUMUS: Nilai Terkecil Diinginkan + ((Kolom Nilai - Nilai Terkecil) / (Nilai Terbesar - Nilai Terkecil) * (Nilai Terbesar Diinginkan - Nilai Terkecil Diinginkan))
+                resultNum = minTarget + ((rawNum - minSource) / (maxSource - minSource) * (maxTarget - minTarget));
+            }
+
+            if (decimals !== 'exact') {
+                const decP = parseInt(decimals);
+                resultNum = parseFloat(resultNum.toFixed(decP));
+            }
+
+            student.hasil = resultNum;
+
+            // Format for display and copying (handling Indonesian vs US Excel decimal separators)
+            let formattedStr = resultNum.toString();
+            if (separator === 'comma') {
+                formattedStr = formattedStr.replace('.', ',');
+            }
+            student.hasilFormatted = formattedStr;
+
+            if (cellHasil) {
+                cellHasil.textContent = formattedStr;
+            }
+        }
+
+        function calculateAll() {
+            if (!currentSelectedClass || !groupedData[currentSelectedClass]) return;
+            const students = groupedData[currentSelectedClass];
+            students.forEach((_, idx) => calculateRow(idx));
+            updateQuickStats();
+        }
+
+        function autoDetectMinMax() {
+            if (!currentSelectedClass || !groupedData[currentSelectedClass]) return;
+            const students = groupedData[currentSelectedClass];
+            
+            const validValues = students
+                .map(s => parseFloat(s.murni))
+                .filter(v => !isNaN(v));
+
+            if (validValues.length === 0) {
+                document.getElementById('minSource').value = 0;
+                document.getElementById('maxSource').value = 0;
+                return;
+            }
+
+            const min = Math.min(...validValues);
+            const max = Math.max(...validValues);
+
+            document.getElementById('minSource').value = min;
+            document.getElementById('maxSource').value = max;
+        }
+
+        function updateQuickStats() {
+            if (!currentSelectedClass || !groupedData[currentSelectedClass]) return;
+            const students = groupedData[currentSelectedClass];
+            
+            const hasilArr = students
+                .map(s => parseFloat(s.hasil))
+                .filter(v => !isNaN(v));
+
+            const statsEl = document.getElementById('quickStats');
+            if (hasilArr.length === 0) {
+                statsEl.textContent = 'Rata-rata Hasil: -';
+            } else {
+                const avg = hasilArr.reduce((a, b) => a + b, 0) / hasilArr.length;
+                statsEl.textContent = `Rata-rata Hasil Konversi: ${avg.toFixed(2)} (Terisi: ${hasilArr.length}/${students.length})`;
+            }
+        }
+
+        // Copy Results formatted as vertical column for Excel
+        function copyResults() {
+            if (!currentSelectedClass || !groupedData[currentSelectedClass]) return;
+            const students = groupedData[currentSelectedClass];
+
+            if (students.length === 0) {
+                showNotification('Tidak ada data siswa untuk disalin.', 'warning');
+                return;
+            }
+
+            // Create string separated by newlines using properly formatted decimal numbers
+            const copyText = students.map(s => (s.hasilFormatted && s.hasilFormatted !== '-') ? s.hasilFormatted : '').join('\r\n');
+
+            executeCopy(copyText);
+        }
+
+        function executeCopy(text) {
+            // Fallback copy using text area for standard document execution
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";  // Avoid scrolling to bottom
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showNotification('Hasil nilai berhasil disalin! Siap dipaste berurutan di Excel.', 'success');
+                } else {
+                    showNotification('Gagal menyalin data', 'danger');
+                }
+            } catch (err) {
+                console.error('Copy error', err);
+                showNotification('Gagal menyalin data', 'danger');
+            }
+
+            document.body.removeChild(textArea);
+        }
+
+        // Paste Values into Nilai Murni column
+        async function pasteValues() {
+            if (!currentSelectedClass || !groupedData[currentSelectedClass]) {
+                showNotification('Pilih kelas terlebih dahulu', 'warning');
+                return;
+            }
+
+            try {
+                const text = await navigator.clipboard.readText();
+                processPastedText(text);
+            } catch (err) {
+                // Modal or manual input fallback if permission fails
+                const manualText = prompt("Tempelkan (Paste) data nilai dari Excel di sini (harus berurutan ke bawah):");
+                if (manualText) {
+                    processPastedText(manualText);
+                } else {
+                    showNotification('Gagal membaca clipboard. Pastikan memberikan izin akses clipboard.', 'danger');
+                }
+            }
+        }
+
+        function processPastedText(text) {
+            if (!text || text.trim() === '') {
+                showNotification('Proses GAGAL: Data copyan kosong!', 'danger');
+                return;
+            }
+
+            // Split into lines (support \r\n or \n)
+            let lines = text.split(/\r?\n/).map(l => l.trim());
+
+            // Filter out empty lines at the trailing end
+            while (lines.length > 0 && lines[lines.length - 1] === '') {
+                lines.pop();
+            }
+
+            if (lines.length === 0) {
+                showNotification('Proses GAGAL: Data tidak memiliki format baris berurutan.', 'danger');
+                return;
+            }
+
+            // Validation: Check if values contain tabs or horizontal separation indicating multi-column copy
+            let isMultiColumn = lines.some(line => line.includes('\t'));
+            if (isMultiColumn) {
+                showNotification('Proses GAGAL: Data copyan harus berupa 1 kolom berbaris ke bawah (bukan menyamping/banyak kolom).', 'danger');
+                return;
+            }
+
+            const students = groupedData[currentSelectedClass];
+
+            // Assign values
+            let appliedCount = 0;
+            lines.forEach((val, idx) => {
+                if (idx < students.length) {
+                    // Replace comma with dot for decimal handling from excel
+                    let sanitizedVal = val.replace(',', '.');
+                    if (sanitizedVal !== '' && !isNaN(parseFloat(sanitizedVal))) {
+                        students[idx].murni = parseFloat(sanitizedVal);
+                    } else {
+                        students[idx].murni = '';
+                    }
+                    appliedCount++;
+                }
+            });
+
+            // Re-render, detect min/max dynamically, and calculate
+            renderStudentTable();
+            autoDetectMinMax();
+            calculateAll();
+
+            if (lines.length > students.length) {
+                showNotification(`Berhasil mengisi ${appliedCount} nilai murni. (Catatan: Ada ${lines.length - students.length} data copyan berlebih)`, 'warning');
+            } else {
+                showNotification(`Berhasil mengisi ${appliedCount} nilai murni dari copyan!`, 'success');
+            }
+        }
+
+        function showNotification(msg, type = 'info') {
+            const banner = document.getElementById('alertBanner');
+            const msgEl = document.getElementById('alertMessage');
+
+            banner.className = "px-4 py-3 text-xs font-semibold flex items-center justify-between transition-all duration-300 rounded-lg shadow-sm mb-3";
+
+            let icon = 'fa-circle-info';
+            if (type === 'success') {
+                banner.classList.add('bg-emerald-50', 'text-emerald-800', 'border', 'border-emerald-200');
+                icon = 'fa-circle-check text-emerald-600';
+            } else if (type === 'danger') {
+                banner.classList.add('bg-rose-50', 'text-rose-800', 'border', 'border-rose-200');
+                icon = 'fa-triangle-exclamation text-rose-600';
+            } else if (type === 'warning') {
+                banner.classList.add('bg-amber-50', 'text-amber-800', 'border', 'border-amber-200');
+                icon = 'fa-circle-exclamation text-amber-600';
+            } else {
+                banner.classList.add('bg-blue-50', 'text-blue-800', 'border', 'border-blue-200');
+                icon = 'fa-circle-info text-blue-600';
+            }
+
+            msgEl.innerHTML = `<i class="fa-solid ${icon} text-sm"></i> ${msg}`;
+            banner.classList.remove('hidden');
+
+            // Auto dismiss after 5 seconds
+            setTimeout(() => {
+                hideAlert();
+            }, 5000);
+        }
+
+        function hideAlert() {
+            document.getElementById('alertBanner').classList.add('hidden');
+        }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
